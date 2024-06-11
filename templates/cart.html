@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keranjang Belanja</title>
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Keranjang Belanja</h1>
+        <form action="/cart" method="post">
+            <table class="table table-bordered">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Nama Produk</th>
+                        <th>Harga Satuan</th>
+                        <th>Jumlah</th>
+                        <th>Harga Total</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.price | format_currency }}</td>
+                        <td>
+                            <input type="number" class="form-control quantity-input" name="{{ product.id }}" value="{{ product.quantity }}" min="1" onchange="calculateTotalPrice(this)">
+                        </td>
+                        <td class="total-price">{{ (product.price * product.quantity) | format_currency }}</td>
+                        <td>
+                            <form action="/remove_from_cart/{{ loop.index0 }}" method="post">
+                                <button type="submit" class="btn btn-danger">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="text-right mb-4">
+                <button type="submit" class="btn btn-primary" name="update_quantities">Perbarui Jumlah</button>
+            </div>
+        </form>
+        <div class="text-center">
+            <p class="font-weight-bold">Total Harga: <span id="totalPrice">{{ total_price | format_currency }}</span></p>
+            <form action="/cart" method="post">
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="name">Nama:</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="phone">Nomor Telepon:</label>
+                        <input type="text" class="form-control" id="phone" name="phone" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="address">Alamat:</label>
+                        <textarea class="form-control" id="address" name="address" rows="2" required></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Simpan Data</button>
+            </form>
+            {% if success_message %}
+            <p class="text-success">{{ success_message }}</p>
+            {% endif %}
+            <a href="/" class="btn btn-secondary mt-3">Kembali</a>
+        </div>
+    </div>
+    <!-- Include Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function calculateTotalPrice(input) {
+            const priceElement = input.parentElement.previousElementSibling;
+            const totalPriceElement = input.parentElement.nextElementSibling;
+            const price = parseFloat(priceElement.textContent.replace('Rp', '').replace(/\./g, '').replace(',', '.'));
+            const quantity = parseInt(input.value);
+            const totalPrice = price * quantity;
+            totalPriceElement.textContent = formatCurrency(totalPrice);
+            updateTotalPrice();
+        }
+
+        function updateTotalPrice() {
+            let total = 0;
+            const totalPriceElements = document.querySelectorAll('.total-price');
+            totalPriceElements.forEach(element => {
+                const price = parseFloat(element.textContent.replace('Rp', '').replace(/\./g, '').replace(',', '.'));
+                total += price;
+            });
+            const totalPriceElement = document.getElementById('totalPrice');
+            totalPriceElement.textContent = formatCurrency(total);
+        }
+
+        function formatCurrency(value) {
+            return 'Rp ' + value.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+        }
+    </script>
+</body>
+</html>
