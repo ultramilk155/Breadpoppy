@@ -6,22 +6,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Data produk sederhana
-products = [
-    {"id": 1, "name": "Sepatu Nike", "price": 500000},
-    {"id": 2, "name": "Tas Ransel", "price": 300000},
-    {"id": 3, "name": "Kemeja Pria", "price": 150000},
-    {"id": 4, "name": "Kaos kaki", "price": 180000},
-]
-
 # Variabel global untuk menyimpan item di keranjang
 cart = []
 
 # Telegram Bot Token and Chat ID
 TELEGRAM_BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE'
 TELEGRAM_CHAT_ID = 'YOUR_CHAT_ID_HERE'
-
-
 
 # Fungsi untuk membuat koneksi ke database
 def get_db_connection():
@@ -40,18 +30,41 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (order_id INTEGER PRIMARY KEY, customer_id INTEGER, product_name TEXT, product_price INTEGER, quantity INTEGER, order_date TEXT,
                   FOREIGN KEY(customer_id) REFERENCES customers(id))''')
+    # Buat tabel products jika belum ada
+    c.execute('''CREATE TABLE IF NOT EXISTS products
+                        (id INTEGER PRIMARY KEY, name TEXT, price INTEGER, image_url TEXT)''')
     conn.commit()
     conn.close()
 
-# Memastikan kolom order_date ada di tabel orders
-def ensure_order_date_column():
+# Fungsi untuk memperbarui tabel produk dan memastikan kolom image_url ada
+def update_products_table():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("PRAGMA table_info(orders)")
-    columns = [column[1] for column in c.fetchall()]
-    if "order_date" not in columns:
-        c.execute("ALTER TABLE orders ADD COLUMN order_date TEXT")
+    # Tambahkan kolom image_url jika belum ada
+    c.execute("PRAGMA table_info(products)")
+    columns = [col[1] for col in c.fetchall()]
+    if 'image_url' not in columns:
+        c.execute("ALTER TABLE products ADD COLUMN image_url TEXT")
     conn.commit()
+    conn.close()
+
+# Fungsi untuk memastikan data produk awal ada di database
+def init_products():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM products")
+    count = c.fetchone()[0]
+    if count == 0:
+        products = [
+            {"name": "Sepatu Nike", "price": 500000, "image_url": "product1.jpeg"},
+            {"name": "Tas Ransel", "price": 300000, "image_url": "product2.jpeg"},
+            {"name": "Kemeja Pria", "price": 150000, "image_url": "product3.jpeg"},
+            {"name": "Kaos Kaki", "price": 180000, "image_url": "product4.jpeg"},
+        ]
+        for product in products:
+            c.execute("INSERT INTO products (name, price, image_url) VALUES (?, ?, ?)",
+                      (product['name'], product['price'], product['image_url']))
+        conn.commit()
     conn.close()
 
 # Fungsi untuk mengirim pesan ke Telegram
@@ -73,27 +86,28 @@ def get_images():
             images.append(filename)
     return images
 
-# Menghubungkan produk dengan gambar secara terbalik
-images = get_images()
-images.reverse()  # Membalik urutan gambar
-for i, product in enumerate(products):
-    if i < len(images):
-        product['image_url'] = images[i]
-    else:
-        product['image_url'] = 'default.jpg'  # Default image if not enough images
-
-# Membuat tabel jika belum ada
+# Membuat tabel jika belum ada dan memastikan data awal ada di database
 init_db()
-ensure_order_date_column()
+update_products_table()
+init_products()
 
 @app.route('/')
 def index():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM products")
+    products = c.fetchall()
+    conn.close()
     return render_template('index.html', products=products, image_dir='/static/images/')
 
-@app.route('/products')  # Gunakan route yang berbeda untuk menampilkan halaman produk
+@app.route('/products')
 def product():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM products")
+    products = c.fetchall()
+    conn.close()
     return render_template('product_list.html', products=products, image_dir='/static/images/')
-
 
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():
@@ -104,66 +118,75 @@ def add_product():
 
         if image:
             image_filename = image.filename
-            image_path = os.path.join('static/images', image_filename)  # Perbaiki IMAGE_DIR menjadi string langsung
+            image_path = os.path.join('static/images', image_filename)
             image.save(image_path)
         else:
             image_filename = 'default.jpg'
 
-        # Menambahkan produk baru ke daftar produk
-        new_product_id = max(p['id'] for p in products) + 1 if products else 1
-        new_product = {
-            'id': new_product_id,
-            'name': name,
-            'price': price,
-            'image_url': image_filename
-        }
-        products.append(new_product)
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO products (name, price, image_url) VALUES (?, ?, ?)",
+                  (name, price, image_filename))
+        conn.commit()
+        conn.close()
 
         return redirect(url_for('product'))
 
     return render_template('add_product.html')
 
-
 @app.route('/delete_product/<int:product_id>', methods=['POST'])
 def delete_product(product_id):
-    global products
-    products = [product for product in products if product['id'] != product_id]
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    conn.commit()
+    conn.close()
     return redirect(url_for('product'))
-
 
 @app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
-    product = next((p for p in products if p['id'] == product_id), None)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM products WHERE id = ?", (product_id,))
+    product = c.fetchone()
+
     if request.method == 'POST':
-        product['name'] = request.form['name']
-        product['price'] = int(request.form['price'])
+        name = request.form['name']
+        price = int(request.form['price'])
         image = request.files['image']
 
         if image:
             image_filename = image.filename
-            image_path = os.path.join('static/images', image_filename)  # Perbaiki IMAGE_DIR menjadi string langsung
+            image_path = os.path.join('static/images', image_filename)
             image.save(image_path)
-            product['image_url'] = image_filename
+        else:
+            image_filename = product['image_url']
+
+        c.execute("UPDATE products SET name = ?, price = ?, image_url = ? WHERE id = ?",
+                  (name, price, image_filename, product_id))
+        conn.commit()
+        conn.close()
 
         return redirect(url_for('product'))
 
+    conn.close()
     return render_template('edit_product.html', product=product, image_dir='/static/images/')
-
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
     quantity = int(request.form.get('quantity', 1))
-    # Find product by ID
-    product = next((p for p in products if p["id"] == product_id), None)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM products WHERE id = ?", (product_id,))
+    product = c.fetchone()
+    conn.close()
 
     if product:
-        # Check if the product is already in the cart
         for item in cart:
             if item["id"] == product_id:
                 item["quantity"] += quantity
                 break
         else:
-            # If not in the cart, add it with the specified quantity
             cart.append({"id": product["id"], "name": product["name"], "price": product["price"], "quantity": quantity})
 
     return redirect(url_for('index'))
@@ -172,18 +195,15 @@ def add_to_cart(product_id):
 def view_cart():
     if request.method == 'POST':
         if 'update_quantities' in request.form:
-            # Update quantities
             for item in cart:
                 item_id = str(item['id'])
                 if item_id in request.form:
                     item['quantity'] = int(request.form[item_id])
         else:
-            # Save customer details
             name = request.form['name']
             phone = request.form['phone']
             address = request.form['address']
 
-            # Insert customer data into the database
             conn = get_db_connection()
             c = conn.cursor()
             c.execute("INSERT INTO customers (name, phone, address) VALUES (?, ?, ?)", (name, phone, address))
@@ -197,15 +217,12 @@ def view_cart():
             conn.commit()
             conn.close()
 
-            # Send message to Telegram
             message = f"New Order from {name}\nPhone: {phone}\nAddress: {address}\nOrder Date: {order_date}\nProducts:\n"
             for item in cart:
                 message += f"- {item['name']} (x{item['quantity']}): Rp {item['price'] * item['quantity']:,.0f}\n".replace(",", ".")
             send_telegram_message(message)
 
-            # Clear cart after saving data
             cart.clear()
-
             success_message = "Data pelanggan telah disimpan."
             return render_template('cart.html', products=cart, total_price=0, success_message=success_message)
 
@@ -216,21 +233,18 @@ def view_cart():
 def remove_from_cart(product_index):
     if 0 <= product_index < len(cart):
         cart.pop(product_index)
-
     return redirect(url_for('view_cart'))
 
 @app.route('/orders', methods=['GET', 'POST'])
 def view_orders():
     conn = get_db_connection()
     c = conn.cursor()
-
     query = '''SELECT customers.name, customers.phone, customers.address, orders.product_name, orders.product_price, orders.quantity, orders.order_date 
                FROM customers JOIN orders ON customers.id = orders.customer_id'''
     params = []
 
     if request.method == 'POST':
         filters = []
-
         start_date = request.form['start_date']
         end_date = request.form['end_date']
         customer_name = request.form['customer_name']
@@ -251,13 +265,12 @@ def view_orders():
         if filters:
             query += " WHERE " + " AND ".join(filters)
 
-        c.execute(query + " ORDER BY orders.order_date DESC", params)  # Order by order_date in descending order
+        c.execute(query + " ORDER BY orders.order_date DESC", params)
         orders = c.fetchall()
-
-        total_filtered_price = sum(order['product_price'] for order in orders)  # Calculate total filtered product price
-        total_filtered_quantity = sum(order['quantity'] for order in orders)  # Calculate total filtered product quantity
+        total_filtered_price = sum(order['product_price'] for order in orders)
+        total_filtered_quantity = sum(order['quantity'] for order in orders)
     else:
-        c.execute(query + " ORDER BY orders.order_date DESC LIMIT 10")  # Default to showing the 10 most recent entries
+        c.execute(query + " ORDER BY orders.order_date DESC LIMIT 10")
         orders = c.fetchall()
         total_filtered_price = None
         total_filtered_quantity = None

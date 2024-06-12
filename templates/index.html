@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Produk</title>
+    <title></title> <!-- Hapus tulisan Breadpoppy -->
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <!-- Link to external CSS file -->
@@ -45,11 +45,31 @@
         .product-card form {
             margin-bottom: 0;
         }
+
+        .logo {
+            max-height: 150px; /* Menyesuaikan ukuran logo */
+            margin-right: 20px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+        .header-title h1 {
+            font-size: 2.5rem; /* Menyesuaikan ukuran teks judul */
+            margin: 0;
+        }
     </style>
 </head>
 <body>
     <div class="container my-5">
-        <h1 class="text-center mb-4">Daftar Produk</h1>
+        <div class="header-title">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" class="logo" alt="Logo">
+            <h1>Breadpoppy</h1>
+        </div>
         <div class="row">
             {% for product in products %}
             <div class="col-md-4 mb-4">
@@ -67,7 +87,7 @@
             </div>
             {% endfor %}
         </div>
-        <div class="text-center">
+        <div class="text-center mt-4">
             <a href="/cart" class="btn btn-secondary">Lihat Keranjang</a>
         </div>
     </div>

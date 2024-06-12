@@ -2,18 +2,27 @@
 
 /* Custom styles for product listing */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Comic Sans MS', cursive, sans-serif; /* Playful and friendly font */
+    background-color: #f0f8ff; /* Light blue background to match the logo's soft feel */
     margin: 0;
     padding: 0;
+    color: #333; /* Dark grey text color for readability */
 }
 
 h1 {
     font-size: 2.5rem;
+    color: #4CAF50; /* Matching the green tone from the button */
+    text-align: center;
 }
 
 .card {
-    border: 1px solid #ccc;
+    border: 2px solid #6cc3b0; /* Teal border to match the logo color */
+    border-radius: 10px; /* Rounded corners for a softer look */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s;
+    background-color: #ffffff; /* White background for cards */
+    margin: 20px;
+    padding: 20px;
 }
 
 .card:hover {
@@ -21,30 +30,59 @@ h1 {
 }
 
 .card-title {
-    font-size: 1.25rem;
+    font-size: 1.5rem; /* Slightly larger for emphasis */
+    color: #6cc3b0; /* Teal color to match the logo */
     margin-top: 0;
 }
 
 .card-text {
-    font-size: 1rem;
+    font-size: 1.125rem; /* Slightly larger for readability */
+    color: #666666; /* Dark grey for text */
 }
 
 .btn-primary {
-    background-color: #4CAF50;
+    background-color: #4CAF50; /* Green color matching the window tree */
     border: none;
     color: white;
     padding: 10px 20px;
+    border-radius: 5px; /* Rounded button corners */
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #45a049; /* Darker green on hover */
 }
 
 .btn-secondary {
-    background-color: #6c757d;
+    background-color: #6cc3b0; /* Teal color matching the logo */
     border: none;
     color: white;
     padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #5ba89e; /* Darker teal on hover */
 }
 
 .container {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
+    background-color: #ffffff; /* White background for container */
+    border-radius: 10px; /* Rounded corners for a softer look */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Additional styling for Japanese text */
+.japanese-text {
+    font-size: 1rem;
+    color: #6cc3b0; /* Teal color to match the logo */
+    text-align: center;
+    margin-top: 20px;
 }
